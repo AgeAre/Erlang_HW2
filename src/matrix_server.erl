@@ -24,11 +24,14 @@ shutdown() ->
     true -> matrix_server ! shutdown
   end.
 
-mult(_Arg0, _Arg1) ->
-  % TODO: Call the mult function that will be used by messageing
-  erlang:error(not_implemented).
+mult(Mat1, Mat2) ->
+  mult(self(),1,Mat1, Mat2),
+  receive
+    {1,X} -> X
+  end.
 
-get_version() -> version_1.
+
+get_version() -> version_2.
 explanation() -> {"to answer1"}.
 
 restarter()->
@@ -67,35 +70,22 @@ dotProduct([],[],P) -> P.
 multVec(Pid, {I,J}, Mat1, Mat2) ->
   Row = tuple_to_list(matrix:getRow(Mat1, I)),
   Col = tuple_to_list(matrix:getCol(Mat2, J)),
-  Pid ! {dotProduct(Row, Col),I,J},
-  io:format("~nThreads~p~n", [Pid]).
+  Pid ! {dotProduct(Row, Col),I,J}.
 
 mult(Pid, MsgRef, Mat1, Mat2) ->
   Mat1_rows_num = tuple_size(Mat1),
   Mat2_cols_num = tuple_size(element(1,Mat2)),
   NumElements = Mat1_rows_num * Mat2_cols_num,
-  MatServPid = self(),
-%%  Rows = tuple_to_list(Mat1),
-%%  Cols = [matrix:getCol(Mat2,X) || X <- lists:seq(1,Mat2_cols_num)],
-%%  RxC = [{X,Y} || X <- Rows, Y <- Cols],
-  [spawn(fun() -> multVec(MatServPid,{X,Y}, Mat1, Mat2) end) || X <- lists:seq(1, Mat1_rows_num), Y <- lists:seq(1,Mat2_cols_num)],
-
+  MultPid = self(),
+  [spawn_link(fun() -> multVec(MultPid,{X,Y}, Mat1, Mat2) end) || X <- lists:seq(1, Mat1_rows_num), Y <- lists:seq(1,Mat2_cols_num)],
   ZeroMat = matrix:getZeroMat(Mat1_rows_num, Mat2_cols_num),
   %% [{X,Y} || X <- lists:seq(1, Mat1_rows_num), Y <- lists:seq(1,Mat2_cols_num)].
 GetMsg = fun(_F,0, ResMat) -> Pid ! {MsgRef, ResMat}; %io:format("~n~n~p , ~p~n~n", [ResMat, Pid]);
   (F,N,ResMat) when N > 0 ->
-    io:format("~nBefore receive: ~p~n", [N]),
     receive
-      %{_} -> io:format("~nAfter receive: ~p~n");
       {Res, I, J} ->
-        io:format("~n@@@~p~n", [N]),
         F(F,N - 1, matrix:setElementMat(I,J,ResMat,Res))
     end
  end,
-  io:format("~nAm I getting here?~n"),
   GetMsg(GetMsg, NumElements, ZeroMat).
 
-%%mult(Mat1, Mat2) ->
-%%  receive
-%%    {Pid, MsgRef, {multiple, Mat1, Mat2}} -> io:format("Server's gotten a multiplication request")
-%%  end.
