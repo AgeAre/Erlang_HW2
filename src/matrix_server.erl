@@ -58,9 +58,6 @@ loop() ->
 
   end.
 
-
-
-
 dotProduct(A,B) when length(A) == length(B) -> dotProduct(A,B,0);
 dotProduct(_,_) -> erlang:error('Vectors must have the same length.').
 
@@ -71,24 +68,25 @@ multVec(Pid, {I,J}, Mat1, Mat2) ->
   Row = tuple_to_list(matrix:getRow(Mat1, I)),
   Col = tuple_to_list(matrix:getCol(Mat2, J)),
   Pid ! {dotProduct(Row, Col),I,J},
-  io:format("~nThreads~n").
+  io:format("~nThreads~p~n", [Pid]).
 
 mult(Pid, MsgRef, Mat1, Mat2) ->
   Mat1_rows_num = tuple_size(Mat1),
   Mat2_cols_num = tuple_size(element(1,Mat2)),
   NumElements = Mat1_rows_num * Mat2_cols_num,
+  MatServPid = self(),
 %%  Rows = tuple_to_list(Mat1),
 %%  Cols = [matrix:getCol(Mat2,X) || X <- lists:seq(1,Mat2_cols_num)],
 %%  RxC = [{X,Y} || X <- Rows, Y <- Cols],
-  [spawn(fun() -> multVec(self(),{X,Y}, Mat1, Mat2) end) || X <- lists:seq(1, Mat1_rows_num), Y <- lists:seq(1,Mat2_cols_num)],
+  [spawn(fun() -> multVec(MatServPid,{X,Y}, Mat1, Mat2) end) || X <- lists:seq(1, Mat1_rows_num), Y <- lists:seq(1,Mat2_cols_num)],
 
   ZeroMat = matrix:getZeroMat(Mat1_rows_num, Mat2_cols_num),
   %% [{X,Y} || X <- lists:seq(1, Mat1_rows_num), Y <- lists:seq(1,Mat2_cols_num)].
-GetMsg = fun(_F,0, ResMat) -> io:format("~nHi!!!!~n");%Pid ! {MsgRef, ResMat};
+GetMsg = fun(_F,0, ResMat) -> Pid ! {MsgRef, ResMat}; %io:format("~n~n~p , ~p~n~n", [ResMat, Pid]);
   (F,N,ResMat) when N > 0 ->
     io:format("~nBefore receive: ~p~n", [N]),
     receive
-
+      %{_} -> io:format("~nAfter receive: ~p~n");
       {Res, I, J} ->
         io:format("~n@@@~p~n", [N]),
         F(F,N - 1, matrix:setElementMat(I,J,ResMat,Res))
