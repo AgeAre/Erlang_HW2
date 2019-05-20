@@ -31,7 +31,7 @@ mult(Mat1, Mat2) ->
   end.
 
 
-get_version() -> version_2.
+get_version() -> version_1.
 explanation() -> {"to answer1"}.
 
 restarter()->
@@ -41,7 +41,7 @@ restarter()->
   receive
     %{'EXIT', Pid, normal} -> ok;
     {'EXIT', Pid, shutdown} -> ok;
-    {'EXIT', Pid, _} -> ?MODULE:restarter()
+    {'EXIT', Pid, _} -> restarter()
   end.
 
 loop() ->
@@ -53,7 +53,7 @@ loop() ->
     shutdown -> exit(self(), shutdown);
 
     {Pid, MsgRef, get_version}->
-      Pid ! {MsgRef, version_1},
+      Pid ! {MsgRef, get_version()},
       loop();
 
     sw_upgrade ->
