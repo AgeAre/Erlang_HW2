@@ -70,7 +70,8 @@ dotProduct([],[],P) -> P.
 multVec(Pid, {I,J}, Mat1, Mat2) ->
   Row = tuple_to_list(matrix:getRow(Mat1, I)),
   Col = tuple_to_list(matrix:getCol(Mat2, J)),
-  Pid ! {dotProduct(Row, Col),I,J}.
+  Pid ! {dotProduct(Row, Col),I,J},
+  io:format("~nThreads~n").
 
 mult(Pid, MsgRef, Mat1, Mat2) ->
   Mat1_rows_num = tuple_size(Mat1),
@@ -83,13 +84,17 @@ mult(Pid, MsgRef, Mat1, Mat2) ->
 
   ZeroMat = matrix:getZeroMat(Mat1_rows_num, Mat2_cols_num),
   %% [{X,Y} || X <- lists:seq(1, Mat1_rows_num), Y <- lists:seq(1,Mat2_cols_num)].
-GetMsg = fun(_F,0, ResMat) -> Pid ! {MsgRef, ResMat};
+GetMsg = fun(_F,0, ResMat) -> io:format("~nHi!!!!~n");%Pid ! {MsgRef, ResMat};
   (F,N,ResMat) when N > 0 ->
+    io:format("~nBefore receive: ~p~n", [N]),
     receive
+
       {Res, I, J} ->
+        io:format("~n@@@~p~n", [N]),
         F(F,N - 1, matrix:setElementMat(I,J,ResMat,Res))
     end
  end,
+  io:format("~nAm I getting here?~n"),
   GetMsg(GetMsg, NumElements, ZeroMat).
 
 %%mult(Mat1, Mat2) ->
