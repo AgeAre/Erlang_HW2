@@ -10,13 +10,10 @@
 -author("ageare").
 
 %% API
--export([start_server/0, shutdown/0, mult/2, get_version/0, explanation/0, restarter/0, loop/0]).
-
-%% TODO: Don't forget to flush(). messages. probably will be tested.
-
+-export([start_server/0, shutdown/0, mult/2, get_version/0, explanation/0, loop/0]).
 
 start_server() ->
-  spawn(fun() -> restarter() end).
+  spawn(fun() -> restarter:restarter() end).
 
 
 shutdown() ->
@@ -32,23 +29,17 @@ mult(Mat1, Mat2) ->
 
 
 get_version() -> version_1.
-explanation() -> {"to answer1"}.
 
-restarter()->
-  process_flag(trap_exit, true),
-  Pid = spawn_link(fun() -> ?MODULE:loop() end), %TODO try matrix_server:loop and see if it also works
-  register(matrix_server, Pid),
-  receive
-    %{'EXIT', Pid, normal} -> ok;
-    {'EXIT', Pid, shutdown} -> ok;
-    {'EXIT', Pid, _} -> restarter()
-  end.
+explanation() -> {"It is better to separate the supervisor's module from the server's module because otherwise,
+  in case of 2 or more code upgrading in a row, the server would crash and the supervisor with him.
+  if they are in a saperated modules, the supervisor will not be effected by the server's module upgrade"}.
+
 
 loop() ->
   receive
     {Pid, MsgRef, {multiple, Mat1, Mat2}} ->
       spawn(fun() -> mult(Pid, MsgRef, Mat1, Mat2) end),
-      ?MODULE:loop();
+      loop();
 
     shutdown -> exit(self(), shutdown);
 
@@ -57,7 +48,9 @@ loop() ->
       loop();
 
     sw_upgrade ->
-      ?MODULE:loop()
+      ?MODULE:loop();
+
+    _ -> loop()
 
   end.
 
